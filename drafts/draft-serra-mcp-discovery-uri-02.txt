@@ -41,7 +41,8 @@ Status of This Memo
 
    Internet-Drafts are working documents of the Internet Engineering
    Task Force (IETF). Note that other groups may also distribute
-   working documents as Internet-Drafts.
+   working documents as Internet-Drafts. The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
 
    Internet-Drafts are draft documents valid for a maximum of six
    months and may be updated, replaced, or obsoleted by other documents
@@ -49,6 +50,18 @@ Status of This Memo
    material or to cite them other than as "work in progress."
 
    This Internet-Draft will expire on 25 September 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document. Please review these documents
+   carefully, as they describe your rights and restrictions with
+   respect to this document.
 
 Table of Contents
 
@@ -343,7 +356,8 @@ Table of Contents
 
 6.4.  Optional Fields (MAY)
 
-   categories    array    Semantic categories (see mcpstandard.dev/categories)
+   categories    array    Semantic categories
+                          (see mcpstandard.dev/categories)
    languages     array    ISO 639-1 language codes
    coverage      string   ISO 3166-1 country code
    contact       string   Contact email or URL
@@ -615,7 +629,8 @@ Table of Contents
 
    The GitHub discussion tracking community feedback on this draft
    is available at:
-   https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2462
+   https://github.com/modelcontextprotocol/
+   modelcontextprotocol/discussions/2462
 
 
 10.  References
@@ -660,7 +675,8 @@ Table of Contents
 
    [MCP-SPEC]  Anthropic, "Model Context Protocol Specification
                2025-06-18",
-               <https://modelcontextprotocol.io/specification/2025-06-18>
+               <https://modelcontextprotocol.io/
+               specification/2025-06-18>
 
 10.2.  Informative References
 
@@ -693,7 +709,8 @@ Table of Contents
                Serra, M., "MCP Server Discovery -- mcp:// URI scheme
                and /.well-known/mcp-server", GitHub Discussion #2462,
                2026.
-               <https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2462>
+               <https://github.com/modelcontextprotocol/
+               modelcontextprotocol/discussions/2462>
 
 
 Author's Address
