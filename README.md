@@ -2,7 +2,7 @@
 
 **The `mcp://` URI Scheme and MCP Server Discovery Mechanism**
 
-Reference implementation and specification for [draft-serra-mcp-discovery-uri](https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/).
+Reference implementation and specification for [draft-serra-mcp-discovery-uri-03](https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/03/) — the latest version.
 
 ---
 
@@ -67,7 +67,7 @@ curl -s https://mcpstandard.dev/.well-known/mcp-server | python3 -m json.tool
 | -00 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/00/ |
 | -01 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/01/ |
 | -02 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/02/ |
-| -03 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/03/ |
+| **-03** | **https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/03/** ← latest |
 
 ## Related Work
 
