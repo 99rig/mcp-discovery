@@ -67,6 +67,7 @@ curl -s https://mcpstandard.dev/.well-known/mcp-server | python3 -m json.tool
 | -00 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/00/ |
 | -01 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/01/ |
 | -02 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/02/ |
+| -03 | https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/03/ |
 
 ## Related Work
 
