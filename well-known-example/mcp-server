@@ -1,0 +1,16 @@
+{
+  "mcp_version": "2025-06-18",
+  "name": "mcpstandard.dev Reference Server",
+  "description": "Reference implementation of the mcp:// URI scheme and MCP Server Discovery Mechanism. See draft-serra-mcp-discovery-uri-00.",
+  "endpoint": "https://mcpstandard.dev/mcp",
+  "transport": "http",
+  "auth": "none",
+  "capabilities": ["tools", "resources"],
+  "categories": ["standards", "reference", "discovery"],
+  "languages": ["en"],
+  "coverage": "WW",
+  "contact": "marco.serra@mumble.group",
+  "docs": "https://datatracker.ietf.org/doc/draft-serra-mcp-discovery-uri/",
+  "last_updated": "2026-03-25T00:00:00Z",
+  "crawl": true
+}
