@@ -1,0 +1,985 @@
+Internet-Draft                                              M. Serra
+draft-serra-mcp-discovery-uri-03                       Mumble Group
+Intended status: Informational                         25 March 2026
+Expires: 25 September 2026
+
+
+        The "mcp" URI Scheme and MCP Server Discovery Mechanism
+                  draft-serra-mcp-discovery-uri-03
+
+Abstract
+
+   The Model Context Protocol (MCP) defines a standard interface for AI
+   agents to connect to external tools and services. However, no
+   standard mechanism exists for an AI agent to autonomously discover
+   which web domains expose an MCP server.
+
+   This document defines:
+
+   (1) the "mcp" URI scheme, a machine-to-machine identifier for
+       publicly reachable MCP servers;
+
+   (2) a discovery convention based on the well-known URI
+       "/.well-known/mcp-server" as defined in RFC 8615;
+
+   (3) a fallback discovery mechanism using DNS TXT records;
+
+   (4) an optional manifest integrity mechanism using JSON Web Keys
+       (JWK, RFC 7517);
+
+   (5) an optional OAuth 2.0 Authorization Server Metadata pointer
+       (RFC 8414) for clients that need to obtain tokens.
+
+   This specification does not define the MCP protocol itself, nor
+   authentication between agent and server. Those are covered by the
+   MCP specification and OAuth 2.1 respectively.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF). Note that other groups may also distribute
+   working documents as Internet-Drafts. The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six
+   months and may be updated, replaced, or obsoleted by other documents
+   at any time. It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 25 September 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document. Please review these documents
+   carefully, as they describe your rights and restrictions with
+   respect to this document.
+
+Table of Contents
+
+   1.  Introduction
+       1.1.  Requirements Language
+       1.2.  Out of Scope
+       1.3.  Relationship to Other Work
+   2.  Terminology
+   3.  The "mcp" URI Scheme
+       3.1.  Purpose
+       3.2.  Syntax
+       3.3.  Examples
+   4.  MCP Server Discovery
+       4.1.  Discovery Sequence
+       4.2.  Priority
+   5.  DNS TXT Record Format
+       5.1.  Syntax
+       5.2.  Fields
+       5.3.  Limitations
+   6.  The MCP Server Manifest
+       6.1.  Format
+       6.2.  Required Fields
+       6.3.  Recommended Fields (SHOULD)
+       6.4.  Optional Fields (MAY)
+       6.5.  Auth Object
+       6.6.  Transport Values
+       6.7.  Manifest Signature (MAY)
+       6.8.  Endpoint Domain Validation
+
+   Clients MUST verify that the host component of the "endpoint" field
+   in the manifest matches or is a subdomain of the host from which the
+   manifest was retrieved. Manifests where the endpoint host does not
+   match the retrieval host MUST be rejected.
+
+   Examples (manifest retrieved from example.com):
+
+      "endpoint": "https://example.com/mcp/"          valid
+      "endpoint": "https://api.example.com/mcp/"      valid
+      "endpoint": "https://other-domain.com/mcp/"     INVALID -- reject
+
+   This rule prevents manifest-based endpoint hijacking, where a
+   compromised or fraudulent manifest redirects an MCP client to an
+   unrelated server.
+
+6.9.  Expires Field
+
+   Servers SHOULD include an "expires" field containing an ISO 8601
+   timestamp indicating when the manifest becomes stale.
+
+   Clients MUST NOT use a cached manifest past its expiry time without
+   re-fetching it. If the "expires" field is absent, clients SHOULD
+   treat the manifest as stale after the period indicated by the HTTP
+   Cache-Control header, or after 24 hours if no Cache-Control header
+   is present.
+
+   The recommended validity period for a public manifest is between
+   1 hour and 90 days.
+
+6.10.  Primitive Previews (MAY)
+
+   Servers MAY include previews of their tools, resources, and prompts
+   directly in the manifest. This allows MCP clients and crawlers to
+   understand server capabilities without establishing a connection,
+   enabling semantic indexing, security pre-screening, and client-side
+   filtering before the initialization handshake.
+
+   Three optional fields are defined:
+
+   tools_preview      array  Preview of available tools
+   resources_preview  array  Preview of available resources
+   prompts_preview    array  Preview of available prompt templates
+
+   Each field MUST be either:
+
+   (a) An array of preview objects as defined below, or
+   (b) The string "dynamic", indicating that the full list MUST be
+       discovered through the MCP protocol's standard list operations
+       and is subject to change.
+
+6.10.1.  Tool Preview Object
+
+   Each entry in "tools_preview" SHOULD contain:
+
+   name         string  REQUIRED. Tool identifier
+   description  string  SHOULD. Natural language description
+   inputSchema  object  MAY. JSON Schema for tool input parameters
+
+   Example:
+
+      "tools_preview": [
+        {
+          "name": "search_products",
+          "description": "Search products by type, material and size",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query":    { "type": "string" },
+              "category": { "type": "string" },
+              "limit":    { "type": "integer" }
+            },
+            "required": ["query"]
+          }
+        },
+        {
+          "name": "check_stock",
+          "description": "Check real-time warehouse availability"
+        }
+      ]
+
+6.10.2.  Resource Preview Object
+
+   Each entry in "resources_preview" SHOULD contain:
+
+   uri          string  REQUIRED. Resource URI or URI template
+   name         string  SHOULD. Human-readable name
+   description  string  MAY. Natural language description
+   mimeType     string  MAY. MIME type of the resource
+
+   Example:
+
+      "resources_preview": [
+        {
+          "uri": "catalog://products/{id}",
+          "name": "Product Catalog",
+          "description": "Full product details including specs
+          and pricing",
+          "mimeType": "application/json"
+        }
+      ]
+
+6.10.3.  Prompt Preview Object
+
+   Each entry in "prompts_preview" SHOULD contain:
+
+   name         string  REQUIRED. Prompt identifier
+   description  string  SHOULD. Natural language description
+   arguments    array   MAY. List of argument objects with name and
+                             description fields
+
+   Example:
+
+      "prompts_preview": [
+        {
+          "name": "compare_products",
+          "description": "Generate a comparison between two products",
+          "arguments": [
+            { "name": "product_a", "description": "First product ID" },
+            { "name": "product_b", "description": "Second product ID" }
+          ]
+        }
+      ]
+
+6.10.4.  Consistency Requirement
+
+   Clients MUST treat primitive previews as advisory. The authoritative
+   list of tools, resources, and prompts is always the one returned by
+   the MCP protocol's list operations (tools/list, resources/list,
+   prompts/list) after connection establishment.
+
+   Servers SHOULD ensure that the previews are consistent with the
+   actual primitives returned during initialization. Servers MAY omit
+   sensitive tool descriptions from the preview and mark them as
+   "dynamic" if pre-connection disclosure is undesirable.
+
+6.10.5.  Relationship to SEP-1649
+
+   The primitive preview mechanism defined here is intentionally
+   aligned with the MCP Server Cards proposal (SEP-1649) from the MCP
+   maintainers at Anthropic. The key differences are:
+
+   -  This document uses "tools_preview", "resources_preview", and
+      "prompts_preview" field names to make the advisory nature
+      explicit, while SEP-1649 uses "tools", "resources", "prompts".
+
+   -  The well-known path in this document is "/.well-known/mcp-server"
+      while SEP-1649 proposes "/.well-known/mcp/server-card.json".
+      The authors welcome coordination with MCP maintainers to align
+      these paths.
+
+   -  This document additionally defines the "mcp" URI scheme and
+      DNS TXT fallback, which are not covered by SEP-1649.
+
+   -  This document requests formal IANA registration of both the
+      URI scheme and the well-known URI suffix, as noted as a future
+      requirement in SEP-1649.
+
+6.11.  Minimal Example
+       6.11.  Full Example
+       6.13.  HTTP Response Requirements
+   7.  Security Considerations
+       7.1.  Manifest Spoofing
+       7.2.  DNS Hijacking
+       7.3.  Rate Limiting
+       7.4.  Sensitive Data
+       7.5.  Manifest Integrity via JWK Signature
+   8.  IANA Considerations
+       8.1.  URI Scheme Registration
+       8.2.  Well-Known URI Registration
+   9.  Reference Implementation
+   10. References
+       10.1. Normative References
+       10.2. Informative References
+
+
+1.  Introduction
+
+   The Model Context Protocol [MCP-SPEC] has seen rapid adoption since
+   its publication in November 2024. Thousands of MCP servers are
+   publicly available, yet there is no standard way for an AI agent to
+   discover them autonomously starting from a web domain.
+
+   Current approaches rely on manual configuration or voluntary
+   registration in centralized directories. These approaches fail to
+   cover the long tail of MCP servers and require prior human knowledge
+   of each server's existence and URL.
+
+   This document proposes a lightweight, decentralized discovery
+   mechanism that allows any MCP client to determine whether a given
+   web domain exposes an MCP server, using only standard HTTPS requests
+   and DNS queries -- without relying on any central registry or prior
+   configuration.
+
+   The analogy is instructive: before web crawlers, websites existed
+   but were invisible to automated discovery. The introduction of HTTP
+   as a standard scheme, combined with crawlers that followed links,
+   created the navigable web. This document proposes the equivalent
+   infrastructure for the MCP ecosystem.
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals.
+
+1.2.  Out of Scope
+
+   This document does NOT define:
+
+   -  The MCP protocol itself (defined in [MCP-SPEC])
+   -  Authentication between MCP clients and servers (defined via
+      OAuth 2.1)
+   -  The format of MCP tools, resources, or prompts (defined in
+      [MCP-SPEC])
+   -  Discovery of MCP servers on private networks or intranets
+   -  A crawling or indexing infrastructure (implementation concern)
+
+1.3.  Relationship to Other Work
+
+   The MCP community has independently explored similar ideas. SEP-1649,
+   authored by MCP specification maintainers at Anthropic, proposes a
+   "/.well-known/mcp.json" endpoint for server card discovery. That
+   proposal explicitly notes the need to register the well-known suffix
+   with IANA per RFC 8615.
+
+   This IETF draft addresses the same discovery problem from the
+   internet standards track, defining a formal URI scheme ("mcp://")
+   and requesting the necessary IANA registrations. The authors welcome
+   coordination with MCP maintainers to align the well-known path and
+   manifest schema.
+
+
+2.  Terminology
+
+   MCP Server:   A service exposing tools, resources, and/or prompts
+                 via the Model Context Protocol [MCP-SPEC].
+
+   MCP Client:   An AI agent or application that connects to MCP
+                 Servers to invoke tools and retrieve resources.
+
+   MCP URI:      A URI using the "mcp" scheme as defined in Section 3
+                 of this document, identifying a publicly reachable
+                 MCP Server by domain.
+
+   Manifest:     The JSON document returned at /.well-known/mcp-server,
+                 as defined in Section 6 of this document.
+
+   Discovery:    The process by which an MCP Client determines the
+                 endpoint URL of an MCP Server starting from a domain
+                 name alone.
+
+
+3.  The "mcp" URI Scheme
+
+3.1.  Purpose
+
+   The "mcp" URI scheme identifies a publicly reachable MCP Server
+   associated with a web domain. It is intended for use by AI agents
+   and automated crawlers, not by human users or web browsers.
+
+3.2.  Syntax
+
+   The syntax of an MCP URI is defined using ABNF [RFC5234]:
+
+   mcp-URI       = "mcp://" authority path-abempty [ "?" query ]
+   authority     = [ userinfo "@" ] host [ ":" port ]
+   host          = IP-literal / IPv4address / reg-name
+   reg-name      = *( unreserved / pct-encoded / sub-delims )
+   path-abempty  = *( "/" segment )
+   segment       = *pchar
+   query         = *( pchar / "/" / "?" )
+
+   Where "userinfo", "IP-literal", "IPv4address", "unreserved",
+   "pct-encoded", "sub-delims", and "pchar" are as defined in
+   [RFC3986].
+
+3.3.  Examples
+
+   Valid MCP URIs:
+
+      mcp://example.com
+      mcp://api.example.com
+      mcp://example.com/shop
+      mcp://example.com:8080
+
+   Invalid MCP URIs:
+
+      mcp://              (missing host)
+      mcp:example.com     (missing //)
+
+
+4.  MCP Server Discovery
+
+4.1.  Discovery Sequence
+
+   Upon resolving an MCP URI, clients MUST attempt discovery in the
+   following order:
+
+   Step 1 -- Well-Known URI (REQUIRED)
+
+   The client MUST perform an HTTP GET request to:
+
+      https://{host}/.well-known/mcp-server
+
+   with the header:
+
+      Accept: application/json
+
+   If the server responds with HTTP 200 and a valid JSON Manifest
+   (Section 6), the client MUST use the endpoint specified in the
+   Manifest.
+
+   If the server responds with HTTP 301 or 302, the client MUST follow
+   the redirect, up to a maximum of two redirect levels.
+
+   If the server responds with HTTP 404, or the request times out
+   (RECOMMENDED timeout: 5 seconds), the client MUST proceed to
+   Step 2.
+
+   Step 2 -- DNS TXT Record (FALLBACK)
+
+   The client MUST query:
+
+      _mcp.{host}  IN  TXT
+
+   If a TXT record is present containing "v=mcp1", the client MUST
+   extract the endpoint URL from the "endpoint" field and use it.
+
+   If no such record exists, the client MUST proceed to Step 3.
+
+   Step 3 -- Direct Endpoint (LAST RESORT)
+
+   The client MAY attempt a direct MCP handshake at:
+
+      https://{host}/mcp
+
+   If the handshake succeeds, the client MAY use this endpoint. If it
+   fails, the client MUST report that no MCP server was found for the
+   given domain.
+
+4.2.  Priority
+
+   Clients MUST prefer the well-known URI over DNS TXT records because
+   HTTPS provides domain authenticity guarantees that unsigned DNS
+   records do not.
+
+
+5.  DNS TXT Record Format
+
+   For operators who control DNS but not the web server, a DNS TXT
+   record provides an alternative discovery mechanism.
+
+5.1.  Syntax
+
+      _mcp.{domain}  IN  TXT  "v=mcp1; endpoint={url}[; auth={type}]"
+
+5.2.  Fields
+
+   v=mcp1          MUST    Version discriminator
+   endpoint=<url>  MUST    URL of the MCP endpoint
+   auth=<type>     SHOULD  One of: none, apikey, oauth2
+
+5.3.  Limitations
+
+   DNS TXT records are limited to 255 characters per string. For
+   complete manifests, operators SHOULD use the well-known URI
+   mechanism (Section 4.1).
+
+
+6.  The MCP Server Manifest
+
+6.1.  Format
+
+   The Manifest is a JSON document [RFC8259] returned at
+   /.well-known/mcp-server.
+
+6.2.  Required Fields
+
+   mcp_version  string  MCP spec version (e.g. "2025-06-18")
+   name         string  Human-readable server name
+   endpoint     string  URL of the MCP endpoint
+   transport    string  See Section 6.6
+
+6.3.  Recommended Fields (SHOULD)
+
+   description  string  Natural language description of the server
+   auth         object  Authentication requirements (see Section 6.5)
+   capabilities array   ["tools", "resources", "prompts"]
+
+6.4.  Optional Fields (MAY)
+
+   categories    array    Semantic categories
+                          (see mcpstandard.dev/categories)
+   languages     array    ISO 639-1 language codes
+   coverage      string   ISO 3166-1 country code
+   contact       string   Contact email or URL
+   docs          string   Documentation URL
+   last_updated  string   ISO 8601 timestamp
+   crawl         boolean  false to opt out of indexing
+   expires       string   ISO 8601 timestamp after which the manifest
+                          MUST be considered stale and re-fetched
+   signature     object   Manifest integrity signature (see Section 6.7)
+
+6.5.  Auth Object
+
+   The "auth" field SHOULD be present and MUST contain a "type" field
+   with one of the following values: "none", "apikey", "oauth2".
+
+   For OAuth 2.0, an optional "metadata_url" field SHOULD be included
+   pointing to an OAuth 2.0 Authorization Server Metadata endpoint as
+   defined in [RFC8414]. This allows MCP clients to autoconfigure the
+   full OAuth 2.0 flow without additional out-of-band information.
+
+   Example:
+
+      "auth": {
+        "type": "oauth2",
+        "metadata_url":
+          "https://example.com/.well-known/oauth-authorization-server"
+      }
+
+   The "metadata_url" value MUST be an HTTPS URL. Clients that support
+   OAuth 2.0 discovery SHOULD fetch this URL and use the returned
+   metadata to initiate the authorization flow as specified in
+   [RFC8414].
+
+6.6.  Transport Values
+
+   The "transport" field MUST contain one of the following values:
+
+   "http"   JSON-RPC 2.0 over HTTPS (request/response). This is the
+            RECOMMENDED transport for publicly reachable servers.
+
+   "sse"    Server-Sent Events over HTTPS [W3C-SSE]. Suitable for
+            servers that push notifications or stream results.
+
+   "stdio"  Standard input/output. This value is reserved for local
+            process-based MCP servers and MUST NOT appear in manifests
+            served via /.well-known/mcp-server, as such servers are
+            by definition not reachable via a network endpoint.
+            Clients SHOULD treat a manifest with transport "stdio"
+            served over HTTPS as malformed.
+
+   Servers MAY declare multiple transports using a "transports" array
+   field alongside the primary "transport" field.
+
+6.7.  Manifest Signature (MAY)
+
+   Operators who require stronger integrity guarantees for their
+   manifest MAY include a "signature" field containing a detached
+   JWS (JSON Web Signature) as defined in [RFC7515], using a key
+   published via DNS (analogous to DKIM [RFC6376]).
+
+   The signature covers the canonical JSON serialization of the
+   manifest object excluding the "signature" field itself.
+
+   The "signature" object MUST contain:
+
+   alg     string  JWA algorithm identifier (e.g. "RS256", "ES256")
+   kid     string  Key ID corresponding to a JWK published in DNS
+   value   string  Base64url-encoded detached JWS signature
+
+   Example:
+
+      "signature": {
+        "alg": "ES256",
+        "kid": "mcp-key-1",
+        "value": "base64url..."
+      }
+
+   The corresponding public key MUST be published as a DNS TXT record:
+
+      _mcp-key.{domain}  IN  TXT  "v=mcp1jwk; kid=mcp-key-1; jwk={...}"
+
+   Clients that implement signature verification SHOULD reject manifests
+   with invalid signatures. Clients that do not implement signature
+   verification MAY ignore the "signature" field entirely.
+
+   NOTE: The signature mechanism defined here is informational and
+   subject to revision in future versions of this document.
+
+6.8.  Endpoint Domain Validation
+
+   Clients MUST verify that the host component of the "endpoint" field
+   in the manifest matches or is a subdomain of the host from which the
+   manifest was retrieved. Manifests where the endpoint host does not
+   match the retrieval host MUST be rejected.
+
+   Examples (manifest retrieved from example.com):
+
+      "endpoint": "https://example.com/mcp/"          valid
+      "endpoint": "https://api.example.com/mcp/"      valid
+      "endpoint": "https://other-domain.com/mcp/"     INVALID -- reject
+
+   This rule prevents manifest-based endpoint hijacking, where a
+   compromised or fraudulent manifest redirects an MCP client to an
+   unrelated server.
+
+6.9.  Expires Field
+
+   Servers SHOULD include an "expires" field containing an ISO 8601
+   timestamp indicating when the manifest becomes stale.
+
+   Clients MUST NOT use a cached manifest past its expiry time without
+   re-fetching it. If the "expires" field is absent, clients SHOULD
+   treat the manifest as stale after the period indicated by the HTTP
+   Cache-Control header, or after 24 hours if no Cache-Control header
+   is present.
+
+   The recommended validity period for a public manifest is between
+   1 hour and 90 days.
+
+6.10.  Primitive Previews (MAY)
+
+   Servers MAY include previews of their tools, resources, and prompts
+   directly in the manifest. This allows MCP clients and crawlers to
+   understand server capabilities without establishing a connection,
+   enabling semantic indexing, security pre-screening, and client-side
+   filtering before the initialization handshake.
+
+   Three optional fields are defined:
+
+   tools_preview      array  Preview of available tools
+   resources_preview  array  Preview of available resources
+   prompts_preview    array  Preview of available prompt templates
+
+   Each field MUST be either:
+
+   (a) An array of preview objects as defined below, or
+   (b) The string "dynamic", indicating that the full list MUST be
+       discovered through the MCP protocol's standard list operations
+       and is subject to change.
+
+6.10.1.  Tool Preview Object
+
+   Each entry in "tools_preview" SHOULD contain:
+
+   name         string  REQUIRED. Tool identifier
+   description  string  SHOULD. Natural language description
+   inputSchema  object  MAY. JSON Schema for tool input parameters
+
+   Example:
+
+      "tools_preview": [
+        {
+          "name": "search_products",
+          "description": "Search products by type, material and size",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query":    { "type": "string" },
+              "category": { "type": "string" },
+              "limit":    { "type": "integer" }
+            },
+            "required": ["query"]
+          }
+        },
+        {
+          "name": "check_stock",
+          "description": "Check real-time warehouse availability"
+        }
+      ]
+
+6.10.2.  Resource Preview Object
+
+   Each entry in "resources_preview" SHOULD contain:
+
+   uri          string  REQUIRED. Resource URI or URI template
+   name         string  SHOULD. Human-readable name
+   description  string  MAY. Natural language description
+   mimeType     string  MAY. MIME type of the resource
+
+   Example:
+
+      "resources_preview": [
+        {
+          "uri": "catalog://products/{id}",
+          "name": "Product Catalog",
+          "description": "Full product details including specs
+          and pricing",
+          "mimeType": "application/json"
+        }
+      ]
+
+6.10.3.  Prompt Preview Object
+
+   Each entry in "prompts_preview" SHOULD contain:
+
+   name         string  REQUIRED. Prompt identifier
+   description  string  SHOULD. Natural language description
+   arguments    array   MAY. List of argument objects with name and
+                             description fields
+
+   Example:
+
+      "prompts_preview": [
+        {
+          "name": "compare_products",
+          "description": "Generate a comparison between two products",
+          "arguments": [
+            { "name": "product_a", "description": "First product ID" },
+            { "name": "product_b", "description": "Second product ID" }
+          ]
+        }
+      ]
+
+6.10.4.  Consistency Requirement
+
+   Clients MUST treat primitive previews as advisory. The authoritative
+   list of tools, resources, and prompts is always the one returned by
+   the MCP protocol's list operations (tools/list, resources/list,
+   prompts/list) after connection establishment.
+
+   Servers SHOULD ensure that the previews are consistent with the
+   actual primitives returned during initialization. Servers MAY omit
+   sensitive tool descriptions from the preview and mark them as
+   "dynamic" if pre-connection disclosure is undesirable.
+
+6.10.5.  Relationship to SEP-1649
+
+   The primitive preview mechanism defined here is intentionally
+   aligned with the MCP Server Cards proposal (SEP-1649) from the MCP
+   maintainers at Anthropic. The key differences are:
+
+   -  This document uses "tools_preview", "resources_preview", and
+      "prompts_preview" field names to make the advisory nature
+      explicit, while SEP-1649 uses "tools", "resources", "prompts".
+
+   -  The well-known path in this document is "/.well-known/mcp-server"
+      while SEP-1649 proposes "/.well-known/mcp/server-card.json".
+      The authors welcome coordination with MCP maintainers to align
+      these paths.
+
+   -  This document additionally defines the "mcp" URI scheme and
+      DNS TXT fallback, which are not covered by SEP-1649.
+
+   -  This document requests formal IANA registration of both the
+      URI scheme and the well-known URI suffix, as noted as a future
+      requirement in SEP-1649.
+
+6.11.  Minimal Example
+
+      {
+        "mcp_version": "2025-06-18",
+        "name": "Example MCP Server",
+        "endpoint": "https://example.com/mcp",
+        "transport": "http"
+      }
+
+6.12.  Full Example with Primitive Previews
+
+      {
+        "mcp_version": "2025-06-18",
+        "name": "Example Shop MCP Server",
+        "description": "Product catalog and order management",
+        "endpoint": "https://example.com/mcp",
+        "transport": "http",
+        "auth": {
+          "type": "oauth2",
+          "metadata_url":
+            "https://example.com/.well-known/oauth-authorization-server"
+        },
+        "capabilities": ["tools", "resources"],
+        "categories": ["e-commerce", "fashion"],
+        "languages": ["en", "it"],
+        "coverage": "IT",
+        "contact": "api@example.com",
+        "docs": "https://example.com/mcp/docs",
+        "last_updated": "2026-03-25T00:00:00Z",
+        "last_updated": "2026-03-25T00:00:00Z",
+        "expires": "2026-09-25T00:00:00Z",
+        "crawl": true
+      }
+
+6.13.  HTTP Response Requirements
+
+   Servers MUST respond with:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+   Servers SHOULD include:
+
+      Cache-Control: max-age=3600
+
+
+7.  Security Considerations
+
+7.1.  Manifest Spoofing
+
+   A malicious actor could expose a fraudulent /.well-known/mcp-server
+   document. Clients MUST verify that the domain in the manifest
+   endpoint matches the domain of the original MCP URI.
+
+   When HTTPS is used (as REQUIRED by this specification), TLS
+   certificate validation provides a baseline authenticity guarantee.
+   Operators requiring stronger guarantees SHOULD use the manifest
+   signature mechanism defined in Section 6.7.
+
+7.2.  DNS Hijacking
+
+   DNS TXT records may be spoofed on networks without DNSSEC. Clients
+   SHOULD prefer the well-known URI mechanism over DNS TXT records.
+   Operators SHOULD enable DNSSEC where available.
+
+   DNS-based manifest signatures (Section 6.7) inherit the same
+   vulnerability. Operators using the signature mechanism SHOULD
+   also enable DNSSEC for the signing key record.
+
+7.3.  Rate Limiting
+
+   Crawlers may generate excessive requests to /.well-known/mcp-server.
+   Servers SHOULD implement standard HTTP rate limiting and return
+   HTTP 429 (Too Many Requests) with appropriate Retry-After headers
+   when limits are exceeded.
+
+7.4.  Sensitive Data
+
+   The Manifest is a public document. It MUST NOT contain credentials,
+   tokens, API keys, or any private operational information.
+
+7.5.  Manifest Integrity via JWK Signature
+
+   The optional signature mechanism defined in Section 6.7 provides
+   integrity verification for the manifest content. Implementers should
+   be aware that:
+
+   -  The signature covers content integrity but not freshness; a
+      valid signature does not guarantee the manifest is current.
+
+   -  Key rotation should be handled by publishing new key IDs in DNS
+      and updating the manifest accordingly.
+
+   -  Clients that cannot verify signatures MUST NOT treat unsigned
+      manifests as less trustworthy than signed ones in the absence
+      of a policy requiring signatures.
+
+
+8.  IANA Considerations
+
+8.1.  URI Scheme Registration
+
+   This document requests registration of the "mcp" URI scheme in the
+   IANA Uniform Resource Identifier (URI) Schemes registry:
+
+      Scheme name:       mcp
+      Status:            Provisional
+      Applications:      AI agents, MCP clients
+      Contact:           marco.serra@mumble.group
+      Change controller: IETF
+      Reference:         This document
+
+8.2.  Well-Known URI Registration
+
+   This document requests registration of the "mcp-server" well-known
+   URI suffix in the IANA Well-Known URIs registry per [RFC8615]:
+
+      URI suffix:             mcp-server
+      Change controller:      IETF
+      Specification document: This document
+      Related information:    None
+
+
+9.  Reference Implementation
+
+   A reference implementation of the discovery mechanism defined in
+   this document is available at:
+
+      https://mcpstandard.dev
+
+   The implementation includes:
+
+   -  A live /.well-known/mcp-server endpoint demonstrating the
+      manifest format.
+
+   -  A Python client library (mcp-discovery) for resolving mcp://
+      URIs and validating manifests:
+      https://github.com/99rig/mcp-discovery
+
+   -  A WordPress plugin (MCP Discovery) for exposing the manifest
+      on WordPress sites:
+      https://github.com/99rig/mcp-wordpress
+
+   -  A Django package (django-mcp-discovery) for exposing the
+      manifest on Django projects:
+      https://pypi.org/project/django-mcp-discovery/
+
+   -  A standard category taxonomy for manifest categorization:
+      https://mcpstandard.dev/categories.json
+
+   The GitHub discussion tracking community feedback on this draft
+   is available at:
+   https://github.com/modelcontextprotocol/
+   modelcontextprotocol/discussions/2462
+
+
+10.  References
+
+10.1.  Normative References
+
+   [RFC2119]   Bradner, S., "Key words for use in RFCs to Indicate
+               Requirement Levels", BCP 14, RFC 2119, March 1997.
+               <https://www.rfc-editor.org/rfc/rfc2119>
+
+   [RFC3986]   Berners-Lee, T., Fielding, R., and L. Masinter,
+               "Uniform Resource Identifier (URI): Generic Syntax",
+               STD 66, RFC 3986, January 2005.
+               <https://www.rfc-editor.org/rfc/rfc3986>
+
+   [RFC5234]   Crocker, D. and P. Overell, "Augmented BNF for Syntax
+               Specifications: ABNF", STD 68, RFC 5234, January 2008.
+               <https://www.rfc-editor.org/rfc/rfc5234>
+
+   [RFC7515]   Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+               Signature (JWS)", RFC 7515, May 2015.
+               <https://www.rfc-editor.org/rfc/rfc7515>
+
+   [RFC7517]   Jones, M., "JSON Web Key (JWK)", RFC 7517, May 2015.
+               <https://www.rfc-editor.org/rfc/rfc7517>
+
+   [RFC8174]   Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+               RFC 2119 Key Words", BCP 14, RFC 8174, May 2017.
+               <https://www.rfc-editor.org/rfc/rfc8174>
+
+   [RFC8259]   Bray, T., "The JavaScript Object Notation (JSON) Data
+               Interchange Format", STD 90, RFC 8259, December 2017.
+               <https://www.rfc-editor.org/rfc/rfc8259>
+
+   [RFC8414]   Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+               Authorization Server Metadata", RFC 8414, June 2018.
+               <https://www.rfc-editor.org/rfc/rfc8414>
+
+   [RFC8615]   Nottingham, M., "Well-Known Uniform Resource Identifiers
+               (URIs)", RFC 8615, May 2019.
+               <https://www.rfc-editor.org/rfc/rfc8615>
+
+   [MCP-SPEC]  Anthropic, "Model Context Protocol Specification
+               2025-06-18",
+               <https://modelcontextprotocol.io/
+               specification/2025-06-18>
+
+10.2.  Informative References
+
+   [RFC1035]   Mockapetris, P., "Domain names - implementation and
+               specification", STD 13, RFC 1035, November 1987.
+               <https://www.rfc-editor.org/rfc/rfc1035>
+
+   [RFC6376]   Crocker, D., Hansen, T., and M. Kucherawy, "DomainKeys
+               Identified Mail (DKIM) Signatures", STD 76, RFC 6376,
+               September 2011.
+               <https://www.rfc-editor.org/rfc/rfc6376>
+
+   [RFC7595]   Thaler, D., "Guidelines and Registration Procedures for
+               URI Schemes", RFC 7595, June 2015.
+               <https://www.rfc-editor.org/rfc/rfc7595>
+
+   [W3C-SSE]   Hickson, I., "Server-Sent Events", W3C Recommendation,
+               February 2015.
+               <https://www.w3.org/TR/eventsource/>
+
+   [SEP-1649]  Anthropic, "MCP Server Discovery via well-known URI",
+               MCP Spec Enhancement Proposal 1649, 2025.
+
+   [MCPSTANDARD]
+               Serra, M., "mcpstandard.dev -- MCP Discovery Reference
+               Implementation", 2026.
+               <https://mcpstandard.dev>
+
+   [GH-DISCUSSION]
+               Serra, M., "MCP Server Discovery -- mcp:// URI scheme
+               and /.well-known/mcp-server", GitHub Discussion #2462,
+               2026.
+               <https://github.com/modelcontextprotocol/
+               modelcontextprotocol/discussions/2462>
+
+   [SEP-1649]  Anthropic, "MCP Server Cards: HTTP Server Discovery
+               via .well-known", MCP Spec Enhancement Proposal 1649,
+               2025.
+               <https://github.com/modelcontextprotocol/
+               modelcontextprotocol/issues/1649>
+
+
+Author's Address
+
+   Marco Serra
+   Mumble Group
+   Milan, Italy
+   Email: marco.serra@mumble.group
+   URI:   https://mcpstandard.dev
+
