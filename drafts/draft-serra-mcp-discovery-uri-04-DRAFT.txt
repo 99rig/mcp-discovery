@@ -863,6 +863,12 @@ Table of Contents
                           Default: 3600. REQUIRED when trust_class is
                           "regulated" (see Section 6.10.3).
    signature     object   Manifest integrity signature (see Section 6.7)
+   server_card   string   URL of a SEP-2127 compatible Server Card
+                          document, providing richer pre-connection
+                          metadata including tool descriptions,
+                          resources, and prompts. Clients that support
+                          SEP-2127 SHOULD fetch this URL after
+                          resolving the manifest. See Section 1.4.
 
 6.5.  Auth Object
 
@@ -1352,7 +1358,6 @@ Table of Contents
         "contact": "api@example.com",
         "docs": "https://example.com/mcp/docs",
         "last_updated": "2026-03-25T00:00:00Z",
-        "last_updated": "2026-03-25T00:00:00Z",
         "expires": "2026-09-25T00:00:00Z",
         "crawl": true
       }
@@ -1542,15 +1547,6 @@ Table of Contents
    [W3C-SSE]   Hickson, I., "Server-Sent Events", W3C Recommendation,
                February 2015.
                <https://www.w3.org/TR/eventsource/>
-
-   [ACTA]      Farley, T., "Signed Decision Receipts for MCP Transport
-               Layer", Internet-Draft draft-farley-acta-signed-receipts-00,
-               2026.
-               <https://github.com/tomjwxf/ScopeBlindD2/blob/main/specs/
-               draft-farley-acta-signed-receipts-00.md>
-
-   [SEP-1649]  Anthropic, "MCP Server Discovery via well-known URI",
-               MCP Spec Enhancement Proposal 1649, 2025.
 
    [MCPSTANDARD]
                Serra, M., "mcpstandard.dev -- MCP Discovery Reference
