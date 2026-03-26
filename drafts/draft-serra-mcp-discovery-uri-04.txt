@@ -21,14 +21,12 @@ Abstract
 
    (2) a two-mode discovery mechanism: a well-known URI
        (/.well-known/mcp-server) for universal compatibility,
-       and a DNS TXT record for DNS-native fast discovery;
+       and a DNS TXT record format for DNS-native fast discovery;
 
-   (3) a DNS TXT record format for DNS-native discovery (fast mode);
-
-   (4) an optional manifest integrity mechanism using JSON Web
+   (3) an optional manifest integrity mechanism using JSON Web
        Signatures (JWS, RFC 7515) with keys published via DNS;
 
-   (5) a security capability negotiation mechanism through which the
+   (4) a security capability negotiation mechanism through which the
        manifest declares trust class, authentication requirements,
        compliance frameworks, and logging policy before connection.
 
@@ -841,7 +839,7 @@ Table of Contents
    MUST block publication and prompt the operator for the missing
    information.
 
-6.11.  Payment Advertisement (MAY)
+6.11.  Payment Advertisement
 
    Servers that require payment for tool calls MAY declare their
    payment capabilities in the manifest. This allows clients to
@@ -874,7 +872,7 @@ Table of Contents
    SHOULD refer to the relevant payment protocol specifications for
    complete transaction semantics.
 
-6.12.  Primitive Previews (MAY)
+6.12.  Primitive Previews
 
    Servers MAY include previews of their tools, resources, and prompts
    directly in the manifest. This allows MCP clients and crawlers to
