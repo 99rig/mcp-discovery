@@ -596,6 +596,17 @@ Table of Contents
    participation.  The authors welcome coordination with the SEP process
    to converge on a unified discovery mechanism.
 
+   Community feedback on SEP-2127 has identified that operators on
+   fully managed hosting platforms (such as Wix, Squarespace, and
+   similar services) cannot serve arbitrary files at /.well-known paths,
+   as this capability is controlled by the hosting provider rather than
+   the domain owner.  This constraint affects a significant portion of
+   the web, including an estimated 43% of sites running on WordPress
+   and similar CMS platforms in shared hosting environments.  The
+   base mode defined in Section 4.1 of this document addresses this
+   gap by requiring only a single JSON file installable via a CMS
+   plugin, with no DNS configuration required.
+
    [draft-farley-acta-signed-receipts] defines a signed receipt
    mechanism for MCP tool call decisions.  That document addresses the
    accountability layer -- what is recorded after an agent uses a
@@ -1483,6 +1494,14 @@ Table of Contents
    https://github.com/modelcontextprotocol/
    modelcontextprotocol/discussions/2462
 
+   An optional MCP Search Console is available at mcpstandard.dev,
+   providing domain registration, DNS TXT verification, and a public
+   server index.  Registration with this service is entirely optional.
+   Conforming clients can discover any MCP server by following the
+   resolution sequence defined in Section 4 without contacting any
+   central registry.  The Search Console is an implementation of a
+   voluntary crawler; it does not gate discoverability.
+
 
 10.  References
 
@@ -1571,6 +1590,16 @@ Table of Contents
                2025.
                <https://github.com/modelcontextprotocol/
                modelcontextprotocol/issues/1649>
+
+   [SEP-2127]  Anthropic, "MCP Server Cards - HTTP Server Discovery
+               via .well-known", MCP Spec Enhancement Proposal 2127,
+               2026.
+               <https://github.com/modelcontextprotocol/
+               modelcontextprotocol/pull/2127>
+
+   [MCP-WWW]   kormco, "mcp-www: DNS-native MCP discovery client
+               and benchmark", 2026.
+               <https://github.com/kormco/mcp-browse>
 
 
 Author's Address
