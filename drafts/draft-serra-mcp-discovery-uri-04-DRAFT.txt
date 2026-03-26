@@ -26,8 +26,8 @@ Abstract
 
    (3) a DNS TXT record format for DNS-native discovery (fast mode);
 
-   (4) an optional manifest integrity mechanism using JSON Web Keys
-       (JWK, RFC 7517);
+   (4) an optional manifest integrity mechanism using JSON Web
+       Signatures (JWS, RFC 7515) with keys published via DNS;
 
    (5) a security capability negotiation mechanism through which the
        manifest declares trust class, authentication requirements,
@@ -113,7 +113,7 @@ Table of Contents
            6.12.2. Resource Preview Object
            6.12.3. Prompt Preview Object
            6.12.4. Consistency Requirement
-           6.12.5. Relationship to SEP-1649
+           6.12.5. Relationship to SEP-1649 and SEP-2127
        6.13. Minimal Example
        6.14. Full Example with Primitive Previews
        6.15. HTTP Response Requirements
@@ -243,7 +243,7 @@ Table of Contents
       Layer 1  Discovery and security negotiation (this document)
       Layer 2  Connection metadata (SEP-1649, SEP-2127)
       Layer 3  MCP protocol (transport, tool invocation)
-      Layer 4  Accountability (draft-farley-acta-signed-receipts)
+      Layer 4  Accountability ([ACTA])
 
    In fast mode, Layers 0-1 are traversed once at connection setup
    and the result cached.  In base mode, Layer 0 is skipped and
@@ -500,12 +500,22 @@ Table of Contents
                           when trust_class is "regulated"
                           (see Section 6.10.3).
    signature     object   Manifest integrity signature (see Section 6.7)
-   server_card   string   URL of a SEP-2127 compatible Server Card
-                          document, providing richer pre-connection
-                          metadata including tool descriptions,
-                          resources, and prompts. Clients that support
-                          SEP-2127 SHOULD fetch this URL after
-                          resolving the manifest. See Section 1.4.
+   server_card      string   URL of a SEP-2127 compatible Server Card
+                             document, providing richer pre-connection
+                             metadata including tool descriptions,
+                             resources, and prompts. Clients that support
+                             SEP-2127 SHOULD fetch this URL after
+                             resolving the manifest. See Section 1.4.
+   payment_required boolean  Whether tool calls require payment.
+                             See Section 6.11.
+   payment_methods  array    Supported payment method identifiers.
+                             See Section 6.11.
+   tools_preview    array    Preview of available tools.
+                             See Section 6.12.1.
+   resources_preview array   Preview of available resources.
+                             See Section 6.12.2.
+   prompts_preview  array    Preview of available prompt templates.
+                             See Section 6.12.3.
 
 6.5.  Auth Object
 
@@ -616,10 +626,12 @@ Table of Contents
 
 6.10.1.  Overview
 
-   The manifest MUST declare the security posture of the server before
-   any connection is established.  This declaration allows clients to
-   determine required authentication, logging, and compliance behaviour
-   without performing a full protocol handshake.
+   The manifest SHOULD declare the security posture of the server
+   explicitly via the "trust_class" field (Section 6.10.2).  This
+   declaration allows clients to determine required authentication,
+   logging, and compliance behaviour without performing a full protocol
+   handshake.  If "trust_class" is absent, clients MUST apply the
+   defaults defined in Section 6.10.7.
 
    The negotiation is unidirectional and declarative: the server
    publishes its requirements; the client reads and applies them.  No
@@ -955,7 +967,7 @@ Table of Contents
    sensitive tool descriptions from the preview and mark them as
    "dynamic" if pre-connection disclosure is undesirable.
 
-6.12.5.  Relationship to SEP-1649
+6.12.5.  Relationship to SEP-1649 and SEP-2127
 
    The primitive preview mechanism defined here is intentionally
    aligned with the MCP Server Cards proposal (SEP-1649) from the MCP
@@ -992,7 +1004,7 @@ Table of Contents
         "transport": "http"
       }
 
-6.14.  Full Example with Primitive Previews
+6.14.  Full Example
 
       {
         "mcp_version": "2025-06-18",
