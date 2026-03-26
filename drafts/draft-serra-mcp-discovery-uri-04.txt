@@ -24,7 +24,7 @@ Abstract
        and a DNS TXT record format for DNS-native fast discovery;
 
    (3) an optional manifest integrity mechanism using JSON Web
-       Signatures (JWS, RFC 7515) with keys published via DNS;
+       Signatures (JWS, [RFC7515]) with keys published via DNS;
 
    (4) a security capability negotiation mechanism through which the
        manifest declares trust class, authentication requirements,
@@ -300,7 +300,8 @@ Table of Contents
 
 3.2.  Syntax
 
-   The syntax of an MCP URI is defined using ABNF [RFC5234]:
+   The "mcp" URI scheme is registered following the procedures
+   defined in [RFC7595].  The syntax is defined using ABNF [RFC5234]:
 
    mcp-URI       = "mcp://" authority path-abempty [ "?" query ]
    authority     = [ userinfo "@" ] host [ ":" port ]
@@ -417,10 +418,11 @@ Table of Contents
 5.  DNS TXT Record Format
 
    This section defines the DNS TXT record format used in Step 1
-   of the fast mode discovery sequence (Section 4.2).  For
-   operators who control DNS, a DNS TXT record provides a
-   lightweight discovery primitive that confirms MCP presence and
-   advertises the server endpoint without requiring an HTTPS request.
+   of the fast mode discovery sequence (Section 4.2).  DNS TXT
+   records are defined in [RFC1035].  For operators who control
+   DNS, a TXT record provides a lightweight discovery primitive
+   that confirms MCP presence and advertises the server endpoint
+   without requiring an HTTPS request.
 
 5.1.  Syntax
 
