@@ -19,8 +19,9 @@ Abstract
    (1) the "mcp" URI scheme, a machine-to-machine identifier for
        publicly reachable MCP servers;
 
-   (2) a discovery convention based on the well-known URI
-       "/.well-known/mcp-server" as defined in RFC 8615;
+   (2) a two-mode discovery mechanism: a well-known URI
+       (/.well-known/mcp-server) for universal compatibility,
+       and a DNS TXT record for DNS-native fast discovery;
 
    (3) a DNS TXT record format for DNS-native discovery (fast mode);
 
@@ -93,7 +94,7 @@ Table of Contents
        6.4.  Optional Fields (MAY)
        6.5.  Auth Object
        6.6.  Transport Values
-       6.7.  Manifest Signature (MAY)
+       6.7.  Manifest Signature
        6.8.  Endpoint Domain Validation
        6.9.  Expires Field
        6.10. Security Capability Negotiation
@@ -105,8 +106,8 @@ Table of Contents
            6.10.6. The logging Object
            6.10.7. Default Values and Omitted Fields
            6.10.8. Implementation Guidance for Non-Technical Operators
-       6.11. Payment Advertisement (MAY)
-       6.12. Primitive Previews (MAY)
+       6.11. Payment Advertisement
+       6.12. Primitive Previews
            6.12.1. Tool Preview Object
            6.12.2. Resource Preview Object
            6.12.3. Prompt Preview Object
@@ -417,7 +418,9 @@ Table of Contents
 
 5.  DNS TXT Record Format
 
-   For operators who control DNS, a DNS TXT record provides a
+   This section defines the DNS TXT record format used in Step 1
+   of the fast mode discovery sequence (Section 4.2).  For
+   operators who control DNS, a DNS TXT record provides a
    lightweight discovery primitive that confirms MCP presence and
    advertises the server endpoint without requiring an HTTPS request.
 
@@ -557,7 +560,7 @@ Table of Contents
    Servers MAY declare multiple transports using a "transports" array
    field alongside the primary "transport" field.
 
-6.7.  Manifest Signature (MAY)
+6.7.  Manifest Signature
 
    Operators who require stronger integrity guarantees for their
    manifest MAY include a "signature" field containing a detached
@@ -627,16 +630,24 @@ Table of Contents
 
 6.10.1.  Overview
 
+   MCP servers may operate under very different security regimes:
+   a public sandbox tool, an enterprise API requiring OAuth 2.0,
+   and a regulated healthcare server have fundamentally different
+   client behaviour requirements.  Without a pre-connection
+   declaration, a client cannot know which posture applies until
+   after the connection is established -- potentially after
+   sensitive data has already been transmitted.
+
    The manifest SHOULD declare the security posture of the server
    explicitly via the "trust_class" field (Section 6.10.2).  This
    declaration allows clients to determine required authentication,
-   logging, and compliance behaviour without performing a full protocol
-   handshake.  If "trust_class" is absent, clients MUST apply the
-   defaults defined in Section 6.10.7.
+   logging, and compliance behaviour without performing a full
+   protocol handshake.  If "trust_class" is absent, clients MUST
+   apply the defaults defined in Section 6.10.7.
 
    The negotiation is unidirectional and declarative: the server
-   publishes its requirements; the client reads and applies them.  No
-   additional round-trip is required.
+   publishes its requirements; the client reads and applies them.
+   No additional round-trip is required.
 
 6.10.2.  The trust_class Field
 
@@ -1129,43 +1140,20 @@ Table of Contents
 
 9.  Reference Implementation
 
-   A reference implementation of the discovery mechanism defined in
-   this document is available at:
+   A reference implementation of this specification is available at
+   https://mcpstandard.dev, including a live /.well-known/mcp-server
+   endpoint, a Python client library for resolving mcp:// URIs, CMS
+   plugins for WordPress and Django, and an optional voluntary
+   crawler (MCP Search Console).
 
-      https://mcpstandard.dev
+   Source code and community discussion are available at:
 
-   The implementation includes:
-
-   -  A live /.well-known/mcp-server endpoint demonstrating the
-      manifest format.
-
-   -  A Python client library (mcp-discovery) for resolving mcp://
-      URIs and validating manifests:
       https://github.com/99rig/mcp-discovery
 
-   -  A WordPress plugin (MCP Discovery) for exposing the manifest
-      on WordPress sites:
-      https://github.com/99rig/mcp-wordpress
-
-   -  A Django package (django-mcp-discovery) for exposing the
-      manifest on Django projects:
-      https://pypi.org/project/django-mcp-discovery/
-
-   -  A standard category taxonomy for manifest categorization:
-      https://mcpstandard.dev/categories.json
-
-   The GitHub discussion tracking community feedback on this draft
-   is available at:
-   https://github.com/modelcontextprotocol/
-   modelcontextprotocol/discussions/2462
-
-   An optional MCP Search Console is available at mcpstandard.dev,
-   providing domain registration, DNS TXT verification, and a public
-   server index.  Registration with this service is entirely optional.
+   Registration with the Search Console is entirely optional.
    Conforming clients can discover any MCP server by following the
    resolution sequence defined in Section 4 without contacting any
-   central registry.  The Search Console is an implementation of a
-   voluntary crawler; it does not gate discoverability.
+   central registry or index.
 
 
 10.  References
