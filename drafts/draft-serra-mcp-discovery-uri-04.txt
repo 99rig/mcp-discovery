@@ -929,8 +929,7 @@ Table of Contents
         {
           "uri": "catalog://products/{id}",
           "name": "Product Catalog",
-          "description": "Full product details including specs
-          and pricing",
+          "description": "Full product details, specs and pricing",
           "mimeType": "application/json"
         }
       ]
@@ -1019,8 +1018,7 @@ Table of Contents
           "required": true,
           "methods": ["oauth2"],
           "endpoint": "https://example.com/oauth/authorize",
-          "metadata_url": "https://example.com/.well-known/
-            oauth-authorization-server",
+          "metadata_url": "https://example.com/.well-known/as",
           "scopes": ["mcp:read", "mcp:write"]
         },
         "capabilities": ["tools", "resources"],
