@@ -113,7 +113,7 @@ Table of Contents
            6.12.4. Consistency Requirement
            6.12.5. Relationship to SEP-1649 and SEP-2127
        6.13. Minimal Example
-       6.14. Full Example with Primitive Previews
+       6.14. Full Example
        6.15. HTTP Response Requirements
    7.  Security Considerations
        7.1.  Manifest Spoofing
@@ -225,9 +225,9 @@ Table of Contents
    plugin, with no DNS configuration required.
 
    [ACTA] defines a signed receipt mechanism for MCP tool call
-   decisions.  That document addresses the
-   accountability layer -- what is recorded after an agent uses a
-   server.  This document addresses the discovery layer -- how an agent
+   decisions.  That document addresses the accountability layer --
+   what is recorded after an agent uses a server.  This document
+   addresses the discovery layer -- how an agent
    finds a server and what the server declares about itself before the
    first tool call.  The two documents are complementary and
    independently deployable.  The "trust_class" and "compliance" fields
@@ -853,11 +853,11 @@ Table of Contents
       "payment_required": true,
       "payment_methods": ["x402", "stripe"]
 
-   NOTE: On-chain payment methods (e.g., x402) introduce per-transaction
-   latency of ~2 seconds (Base L2) or more.
-   Implementations SHOULD prefer
-   session-level escrow patterns over per-call payments to avoid latency
-   penalties on each tool invocation.
+   NOTE: On-chain payment methods (e.g., x402) introduce
+   per-transaction latency of ~2 seconds (Base L2) or more.
+   Implementations SHOULD prefer session-level escrow patterns
+   over per-call payments to avoid latency penalties on each
+   tool invocation.
 
    This field does not specify the payment protocol itself. Implementors
    SHOULD refer to the relevant payment protocol specifications for
@@ -1019,9 +1019,8 @@ Table of Contents
           "required": true,
           "methods": ["oauth2"],
           "endpoint": "https://example.com/oauth/authorize",
-          "metadata_url":
-            "https://example.com/.well-known/
-              oauth-authorization-server",
+          "metadata_url": "https://example.com/.well-known/
+            oauth-authorization-server",
           "scopes": ["mcp:read", "mcp:write"]
         },
         "capabilities": ["tools", "resources"],
@@ -1247,10 +1246,9 @@ Table of Contents
                <https://github.com/modelcontextprotocol/
                modelcontextprotocol/discussions/2462>
 
-   [ACTA]      Farley, T., "Signed Decision Receipts for MCP Transport
-               draft-farley-acta-
-               signed-receipts-00,
-               2026.
+   [ACTA]      Farley, T., "Signed Decision Receipts for MCP
+               Transport Layer", Internet-Draft
+               draft-farley-acta-signed-receipts-00, 2026.
                <https://github.com/tomjwxf/ScopeBlindD2/blob/main/specs/
                draft-farley-acta-signed-receipts-00.md>
 
