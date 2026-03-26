@@ -226,8 +226,7 @@ Table of Contents
    gap by requiring only a single JSON file installable via a CMS
    plugin, with no DNS configuration required.
 
-   [draft-farley-acta-signed-receipts] defines a signed receipt
-   mechanism for MCP tool call decisions.  That document addresses the
+   [ACTA] defines a signed receipt mechanism for MCP tool call decisions.  That document addresses the
    accountability layer -- what is recorded after an agent uses a
    server.  This document addresses the discovery layer -- how an agent
    finds a server and what the server declares about itself before the
@@ -246,10 +245,11 @@ Table of Contents
       Layer 3  MCP protocol (transport, tool invocation)
       Layer 4  Accountability (draft-farley-acta-signed-receipts)
 
-   Layers 0-1 are traversed once at connection setup and the result
-   cached.  Layer 3 is the ongoing protocol session.  Layer 4 is
-   activated per tool call only when required by the server's declared
-   security posture.
+   In fast mode, Layers 0-1 are traversed once at connection setup
+   and the result cached.  In base mode, Layer 0 is skipped and
+   discovery begins at Layer 1.  Layer 3 is the ongoing protocol
+   session.  Layer 4 is activated per tool call only when required
+   by the server's declared security posture.
 
 1.5.  Requirements Language
 
@@ -368,8 +368,9 @@ Table of Contents
 
    If a TXT record is present containing "v=mcp1", the client has
    confirmed MCP presence and MUST proceed to Step 2 to retrieve
-   the full manifest.  The DNS TXT record provides the server
-   endpoint address; .well-known provides metadata enrichment.
+   the full manifest.  If the record contains "src=", the DNS TXT
+   record also provides the server endpoint address; in all cases
+   .well-known provides the authoritative manifest.
 
    If no such record exists, the client MUST proceed to Step 2.
 
@@ -976,6 +977,11 @@ Table of Contents
    -  This document requests formal IANA registration of both the
       URI scheme and the well-known URI suffix, as noted as a future
       requirement in SEP-1649.
+
+   The "server_card" field defined in Section 6.4 provides a direct
+   pointer from this document's manifest to a SEP-2127 Server Card,
+   allowing the two specifications to coexist without requiring
+   convergence on a single well-known path.
 
 6.13.  Minimal Example
 
