@@ -24,7 +24,7 @@ Abstract
    (2) a discovery convention based on the well-known URI
        "/.well-known/mcp-server" as defined in RFC 8615;
 
-   (3) a fallback discovery mechanism using DNS TXT records;
+   (3) a DNS TXT record format for DNS-native discovery (fast mode);
 
    (4) an optional manifest integrity mechanism using JSON Web Keys
        (JWK, RFC 7517);
@@ -252,8 +252,23 @@ Table of Contents
                   the core vocabulary are invalid and MUST be
                   treated as if absent.
 
-     "endpoint"   URI.  The authentication endpoint.  REQUIRED when
-                  methods includes "bearer" or "oauth2".
+     "endpoint"      URI.  The authentication endpoint.  REQUIRED when
+                     methods includes "bearer" or "oauth2".
+
+     "metadata_url"  URI.  RECOMMENDED when methods includes "oauth2".
+                     OAuth 2.0 Authorization Server Metadata endpoint
+                     as defined in [RFC8414].  Allows MCP clients to
+                     autoconfigure the full OAuth 2.0 flow without
+                     additional out-of-band information.  MUST be an
+                     HTTPS URL.
+
+     "apikey_header" String.  REQUIRED when methods includes "apikey".
+                     The HTTP header name used to deliver the API key
+                     (e.g. "X-Api-Key", "Authorization").
+
+     "scopes"        Array of strings.  REQUIRED when methods includes
+                     "oauth2".  OAuth 2.0 scopes required by the server
+                     (e.g. ["mcp:read", "mcp:write"]).
 
 6.10.5.  The compliance Object
 
@@ -621,15 +636,16 @@ Table of Contents
    The broader layering of the MCP ecosystem as understood by this
    document is as follows:
 
-      Layer 0  MCP protocol (transport, tool invocation)
-      Layer 1  DNS bootstrap (_mcp TXT record)
-      Layer 2  Discovery and security negotiation (this document)
-      Layer 3  Connection metadata (SEP-1649, SEP-2127)
+      Layer 0  DNS bootstrap (_mcp TXT record, fast mode only)
+      Layer 1  Discovery and security negotiation (this document)
+      Layer 2  Connection metadata (SEP-1649, SEP-2127)
+      Layer 3  MCP protocol (transport, tool invocation)
       Layer 4  Accountability (draft-farley-acta-signed-receipts)
 
-   Layers 0-2 are traversed once at connection setup and the result
-   cached.  Layer 4 is activated per tool call only when required by
-   the server's declared security posture.
+   Layers 0-1 are traversed once at connection setup and the result
+   cached.  Layer 3 is the ongoing protocol session.  Layer 4 is
+   activated per tool call only when required by the server's declared
+   security posture.
 
 1.5.  Requirements Language
 
@@ -883,26 +899,22 @@ Table of Contents
 
 6.5.  Auth Object
 
-   The "auth" field SHOULD be present and MUST contain a "type" field
-   with one of the following values: "none", "apikey", "oauth2".
+   The "auth" object is defined in full in Section 6.10.4, which is
+   the canonical definition.  When used as a SHOULD field (Section 6.3),
+   at minimum "required" and "methods" MUST be present.
 
-   For OAuth 2.0, an optional "metadata_url" field SHOULD be included
-   pointing to an OAuth 2.0 Authorization Server Metadata endpoint as
-   defined in [RFC8414]. This allows MCP clients to autoconfigure the
-   full OAuth 2.0 flow without additional out-of-band information.
-
-   Example:
+   Example (minimal, for a public server with optional OAuth 2.0):
 
       "auth": {
-        "type": "oauth2",
+        "required": false,
+        "methods": ["none", "oauth2"],
+        "endpoint": "https://example.com/oauth/authorize",
         "metadata_url":
-          "https://example.com/.well-known/oauth-authorization-server"
+          "https://example.com/.well-known/oauth-authorization-server",
+        "scopes": ["mcp:read"]
       }
 
-   The "metadata_url" value MUST be an HTTPS URL. Clients that support
-   OAuth 2.0 discovery SHOULD fetch this URL and use the returned
-   metadata to initiate the authorization flow as specified in
-   [RFC8414].
+   See Section 6.10.4 for the complete field reference.
 
 6.6.  Transport Values
 
@@ -1098,8 +1110,23 @@ Table of Contents
                   the core vocabulary are invalid and MUST be
                   treated as if absent.
 
-     "endpoint"   URI.  The authentication endpoint.  REQUIRED when
-                  methods includes "bearer" or "oauth2".
+     "endpoint"      URI.  The authentication endpoint.  REQUIRED when
+                     methods includes "bearer" or "oauth2".
+
+     "metadata_url"  URI.  RECOMMENDED when methods includes "oauth2".
+                     OAuth 2.0 Authorization Server Metadata endpoint
+                     as defined in [RFC8414].  Allows MCP clients to
+                     autoconfigure the full OAuth 2.0 flow without
+                     additional out-of-band information.  MUST be an
+                     HTTPS URL.
+
+     "apikey_header" String.  REQUIRED when methods includes "apikey".
+                     The HTTP header name used to deliver the API key
+                     (e.g. "X-Api-Key", "Authorization").
+
+     "scopes"        Array of strings.  REQUIRED when methods includes
+                     "oauth2".  OAuth 2.0 scopes required by the server
+                     (e.g. ["mcp:read", "mcp:write"]).
 
 6.10.5.  The compliance Object
 
@@ -1357,10 +1384,14 @@ Table of Contents
         "description": "Product catalog and order management",
         "endpoint": "https://example.com/mcp",
         "transport": "http",
+        "trust_class": "enterprise",
         "auth": {
-          "type": "oauth2",
+          "required": true,
+          "methods": ["oauth2"],
+          "endpoint": "https://example.com/oauth/authorize",
           "metadata_url":
-            "https://example.com/.well-known/oauth-authorization-server"
+            "https://example.com/.well-known/oauth-authorization-server",
+          "scopes": ["mcp:read", "mcp:write"]
         },
         "capabilities": ["tools", "resources"],
         "categories": ["e-commerce", "fashion"],
@@ -1370,6 +1401,10 @@ Table of Contents
         "docs": "https://example.com/mcp/docs",
         "last_updated": "2026-03-25T00:00:00Z",
         "expires": "2026-09-25T00:00:00Z",
+        "cache_ttl": 3600,
+        "server_card":
+          "https://example.com/.well-known/mcp/server-card.json",
+        "payment_required": false,
         "crawl": true
       }
 
