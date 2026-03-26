@@ -29,8 +29,9 @@ Abstract
    (4) an optional manifest integrity mechanism using JSON Web Keys
        (JWK, RFC 7517);
 
-   (5) an optional OAuth 2.0 Authorization Server Metadata pointer
-       (RFC 8414) for clients that need to obtain tokens.
+   (5) a security capability negotiation mechanism through which the
+       manifest declares trust class, authentication requirements,
+       compliance frameworks, and logging policy before connection.
 
    This specification does not define the MCP protocol itself, nor
    authentication between agent and server. Those are covered by the
@@ -129,403 +130,6 @@ Table of Contents
    10. References
        10.1. Normative References
        10.2. Informative References
-
-6.9.  Expires Field
-
-   Servers SHOULD include an "expires" field containing an ISO 8601
-   timestamp indicating when the manifest becomes stale.
-
-   Clients MUST NOT use a cached manifest past its expiry time without
-   re-fetching it. If the "expires" field is absent, clients SHOULD
-   treat the manifest as stale after the period indicated by the HTTP
-   Cache-Control header, or after 24 hours if no Cache-Control header
-   is present.
-
-   The recommended validity period for a public manifest is between
-   1 hour and 90 days.
-
-6.10.  Security Capability Negotiation
-
-6.10.1.  Overview
-
-   The manifest MUST declare the security posture of the server before
-   any connection is established.  This declaration allows clients to
-   determine required authentication, logging, and compliance behaviour
-   without performing a full protocol handshake.
-
-   The negotiation is unidirectional and declarative: the server
-   publishes its requirements; the client reads and applies them.  No
-   additional round-trip is required.
-
-6.10.2.  The trust_class Field
-
-   The "trust_class" field is an OPTIONAL top-level field in the
-   manifest.  If absent, clients MUST behave as if
-   "trust_class": "public" were declared.  Server operators SHOULD
-   declare "trust_class" explicitly to avoid ambiguity.
-
-   The field functions as a preset: each value implies a defined set
-   of mandatory sub-fields and a minimum guaranteed behaviour that any
-   conforming client MAY assume without inspecting sub-fields
-   individually.
-
-   Defined values:
-
-     "public"      The server is accessible without restrictions.
-                   No authentication is required.  The manifest MAY
-                   be cached freely up to the value of cache_ttl.
-
-     "sandbox"     The server is experimental or non-production.
-                   Clients SHOULD warn users before invoking tools.
-                   Clients MUST NOT use sandbox servers in production
-                   workflows without explicit user confirmation.
-                   The "expires" sub-field is REQUIRED.
-
-     "enterprise"  The server requires controlled access.  Clients
-                   MUST NOT attempt connection before resolving the
-                   declared authentication method.  The "auth" object
-                   is REQUIRED and MUST contain at least one entry
-                   in "methods".
-
-     "regulated"   The server operates under a declared regulatory
-                   regime.  Clients MUST apply the declared
-                   authentication method, MUST NOT cache the manifest
-                   beyond "cache_ttl", and MUST treat all sessions as
-                   subject to logging requirements declared in the
-                   "logging" object.  The "auth", "compliance", and
-                   "logging" objects are all REQUIRED.
-
-   If a client encounters an unrecognised "trust_class" value, it MUST
-   treat the manifest as "regulated" for safety purposes and SHOULD
-   log a warning.
-
-6.10.3.  Mandatory Sub-Fields by trust_class
-
-   The following table defines which sub-fields are REQUIRED (R),
-   OPTIONAL (O), or NOT APPLICABLE (N) for each trust_class value:
-
-   Sub-field            public  sandbox  enterprise  regulated
-   -----------------------------------------------------------
-   auth                 O       O        R           R
-   expires              N       R        O           O
-   compliance           N       N        O           R
-   logging              N       N        O           R
-   cache_ttl            O       O        O           R
-
-   A manifest that declares a trust_class but omits a REQUIRED
-   sub-field for that class is malformed.  Clients MUST NOT connect
-   to a server whose manifest is malformed.
-
-6.10.4.  The auth Object
-
-   When present, the "auth" object MUST contain:
-
-     "required"   Boolean.  If true, the client MUST complete
-                  authentication before sending any tool call.
-
-     "methods"    Array of strings.  Defines the authentication
-                  mechanisms supported by the server.
-
-                  Core vocabulary (MUST be supported by conforming
-                  implementations):
-
-                    "none"    No authentication.  Valid only when
-                              required is false.
-                    "bearer"  Bearer token.  "endpoint" MUST be
-                              present.
-                    "mtls"    Mutual TLS.  Client certificate
-                              required.
-                    "apikey"  Static API key.  Delivery mechanism
-                              MUST be declared in "apikey_header".
-                    "oauth2"  OAuth 2.0 flow.  "endpoint" and
-                              "scopes" MUST be present.
-
-                  Extension values MUST use the "x-" prefix
-                  (e.g., "x-saml", "x-mycompany-sso").  Clients
-                  that encounter an unrecognised "x-" value MUST
-                  ignore it and attempt connection using remaining
-                  known methods.  If no known method remains,
-                  clients MUST NOT connect and SHOULD surface an
-                  error to the operator.
-
-                  Values without the "x-" prefix that are not in
-                  the core vocabulary are invalid and MUST be
-                  treated as if absent.
-
-     "endpoint"      URI.  The authentication endpoint.  REQUIRED when
-                     methods includes "bearer" or "oauth2".
-
-     "metadata_url"  URI.  RECOMMENDED when methods includes "oauth2".
-                     OAuth 2.0 Authorization Server Metadata endpoint
-                     as defined in [RFC8414].  Allows MCP clients to
-                     autoconfigure the full OAuth 2.0 flow without
-                     additional out-of-band information.  MUST be an
-                     HTTPS URL.
-
-     "apikey_header" String.  REQUIRED when methods includes "apikey".
-                     The HTTP header name used to deliver the API key
-                     (e.g. "X-Api-Key", "Authorization").
-
-     "scopes"        Array of strings.  REQUIRED when methods includes
-                     "oauth2".  OAuth 2.0 scopes required by the server
-                     (e.g. ["mcp:read", "mcp:write"]).
-
-6.10.5.  The compliance Object
-
-   Required when trust_class is "regulated".  MUST contain:
-
-     "jurisdiction"   String.  ISO 3166-1 alpha-2 country code, or
-                      one of the defined regional codes:
-                        "EU"  European Union (GDPR applies)
-                        "EEA" European Economic Area
-                        "UK"  United Kingdom (UK GDPR applies)
-                      Clients MUST NOT infer compliance requirements
-                      beyond what is explicitly declared.
-
-     "frameworks"     Array of strings.  Declared compliance
-                      frameworks.  This field is informational --
-                      clients MUST NOT refuse connection based on
-                      unrecognised framework identifiers.
-                      Examples: "GDPR", "HIPAA", "ISO27001",
-                      "PCI-DSS", "SOC2".
-
-     "certification_url"   URI.  OPTIONAL.  A URL where compliance
-                           certification documentation can be
-                           retrieved.  Clients MAY present this to
-                           users or automated auditors.
-
-6.10.6.  The logging Object
-
-   Required when trust_class is "regulated".  MUST contain:
-
-     "required"         Boolean.  If true, the client MUST NOT
-                        suppress session logging for this server.
-
-     "retention_days"   Integer.  OPTIONAL.  Minimum retention period
-                        for session logs in days.  Clients that cannot
-                        honour this value SHOULD NOT connect and MUST
-                        surface a warning to the operator.
-
-6.10.7.  Default Values and Omitted Fields
-
-   Implementations MUST apply the following defaults when fields
-   are absent:
-
-     trust_class        "public"
-     cache_ttl          3600 (seconds)
-     auth.required      false
-     logging.required   false
-
-   The principle is secure-by-default: a missing trust_class is never
-   interpreted as elevated privilege.  The most permissive safe default
-   is applied, and the server operator is responsible for declaring any
-   more restrictive posture explicitly.
-
-6.10.8.  Implementation Guidance for Non-Technical Operators
-
-   Conforming implementations (such as CMS plugins) SHOULD provide a
-   configuration interface that maps user-facing choices to valid
-   manifest fields without requiring the operator to author JSON
-   directly.  The following mapping is RECOMMENDED:
-
-     User declares site type "personal/blog"
-       -> trust_class: "public"
-
-     User declares site type "business/commercial"
-       -> trust_class: "enterprise"
-       -> implementation SHOULD auto-detect existing auth systems
-
-     User declares site type "sensitive data" (health, finance, legal)
-       -> trust_class: "regulated"
-       -> implementation MUST prompt for jurisdiction before
-          publishing manifest
-
-     User declares site type "development/testing"
-       -> trust_class: "sandbox"
-       -> implementation MUST set expires to no more than 90 days
-
-   Implementations MUST NOT publish a malformed manifest.  If required
-   sub-fields cannot be determined automatically, the implementation
-   MUST block publication and prompt the operator for the missing
-   information.
-
-6.11.  Payment Advertisement (MAY)
-
-   Servers that require payment for tool calls MAY declare their
-   payment capabilities in the manifest. This allows clients to
-   determine payment compatibility before connecting.
-
-   Fields:
-
-   payment_required   boolean  Whether tool calls require payment
-   payment_methods    array    Supported payment methods
-
-   Valid payment method identifiers:
-
-   "x402"        HTTP 402 + USDC on-chain (Coinbase x402)
-   "mpp-tempo"   Machine Payment Protocol / Tempo
-   "stripe"      Stripe Connect
-   "apikey"      Pre-paid API key balance
-
-   Example:
-
-      "payment_required": true,
-      "payment_methods": ["x402", "stripe"]
-
-   NOTE: On-chain payment methods (e.g., x402) introduce per-transaction
-   latency of ~2 seconds (Base L2) or more. Implementations SHOULD prefer
-   session-level escrow patterns over per-call payments to avoid latency
-   penalties on each tool invocation.
-
-   This field does not specify the payment protocol itself. Implementors
-   SHOULD refer to the relevant payment protocol specifications for
-   complete transaction semantics.
-
-6.12.  Primitive Previews (MAY)
-
-   Servers MAY include previews of their tools, resources, and prompts
-   directly in the manifest. This allows MCP clients and crawlers to
-   understand server capabilities without establishing a connection,
-   enabling semantic indexing, security pre-screening, and client-side
-   filtering before the initialization handshake.
-
-   Three optional fields are defined:
-
-   tools_preview      array  Preview of available tools
-   resources_preview  array  Preview of available resources
-   prompts_preview    array  Preview of available prompt templates
-
-   Each field MUST be either:
-
-   (a) An array of preview objects as defined below, or
-   (b) The string "dynamic", indicating that the full list MUST be
-       discovered through the MCP protocol's standard list operations
-       and is subject to change.
-
-6.12.1.  Tool Preview Object
-
-   Each entry in "tools_preview" SHOULD contain:
-
-   name         string  REQUIRED. Tool identifier
-   description  string  SHOULD. Natural language description
-   inputSchema  object  MAY. JSON Schema for tool input parameters
-
-   Example:
-
-      "tools_preview": [
-        {
-          "name": "search_products",
-          "description": "Search products by type, material and size",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "query":    { "type": "string" },
-              "category": { "type": "string" },
-              "limit":    { "type": "integer" }
-            },
-            "required": ["query"]
-          }
-        },
-        {
-          "name": "check_stock",
-          "description": "Check real-time warehouse availability"
-        }
-      ]
-
-6.12.2.  Resource Preview Object
-
-   Each entry in "resources_preview" SHOULD contain:
-
-   uri          string  REQUIRED. Resource URI or URI template
-   name         string  SHOULD. Human-readable name
-   description  string  MAY. Natural language description
-   mimeType     string  MAY. MIME type of the resource
-
-   Example:
-
-      "resources_preview": [
-        {
-          "uri": "catalog://products/{id}",
-          "name": "Product Catalog",
-          "description": "Full product details including specs
-          and pricing",
-          "mimeType": "application/json"
-        }
-      ]
-
-6.12.3.  Prompt Preview Object
-
-   Each entry in "prompts_preview" SHOULD contain:
-
-   name         string  REQUIRED. Prompt identifier
-   description  string  SHOULD. Natural language description
-   arguments    array   MAY. List of argument objects with name and
-                             description fields
-
-   Example:
-
-      "prompts_preview": [
-        {
-          "name": "compare_products",
-          "description": "Generate a comparison between two products",
-          "arguments": [
-            { "name": "product_a", "description": "First product ID" },
-            { "name": "product_b", "description": "Second product ID" }
-          ]
-        }
-      ]
-
-6.12.4.  Consistency Requirement
-
-   Clients MUST treat primitive previews as advisory. The authoritative
-   list of tools, resources, and prompts is always the one returned by
-   the MCP protocol's list operations (tools/list, resources/list,
-   prompts/list) after connection establishment.
-
-   Servers SHOULD ensure that the previews are consistent with the
-   actual primitives returned during initialization. Servers MAY omit
-   sensitive tool descriptions from the preview and mark them as
-   "dynamic" if pre-connection disclosure is undesirable.
-
-6.12.5.  Relationship to SEP-1649
-
-   The primitive preview mechanism defined here is intentionally
-   aligned with the MCP Server Cards proposal (SEP-1649) from the MCP
-   maintainers at Anthropic. The key differences are:
-
-   -  This document uses "tools_preview", "resources_preview", and
-      "prompts_preview" field names to make the advisory nature
-      explicit, while SEP-1649 uses "tools", "resources", "prompts".
-
-   -  The well-known path in this document is "/.well-known/mcp-server"
-      while SEP-1649 proposes "/.well-known/mcp/server-card.json".
-      The authors welcome coordination with MCP maintainers to align
-      these paths.
-
-   -  This document additionally defines the "mcp" URI scheme and
-      DNS TXT fallback, which are not covered by SEP-1649.
-
-   -  This document requests formal IANA registration of both the
-      URI scheme and the well-known URI suffix, as noted as a future
-      requirement in SEP-1649.
-
-6.13.  Minimal Example
-       6.11.  Full Example
-       6.15.  HTTP Response Requirements
-   7.  Security Considerations
-       7.1.  Manifest Spoofing
-       7.2.  DNS Hijacking
-       7.3.  Rate Limiting
-       7.4.  Sensitive Data
-       7.5.  Manifest Integrity via JWK Signature
-   8.  IANA Considerations
-       8.1.  URI Scheme Registration
-       8.2.  Well-Known URI Registration
-   9.  Reference Implementation
-   10. References
-       10.1. Normative References
-       10.2. Informative References
-
 
 1.  Introduction
 
@@ -871,6 +475,9 @@ Table of Contents
    description  string  Natural language description of the server
    auth         object  Authentication requirements (see Section 6.5)
    capabilities array   ["tools", "resources", "prompts"]
+   trust_class  string  Security posture declaration. See Section 6.10.2.
+                        Values: "public" | "sandbox" | "enterprise" |
+                        "regulated". Default if absent: "public".
 
 6.4.  Optional Fields (MAY)
 
@@ -887,8 +494,10 @@ Table of Contents
    cache_ttl     integer  Cache duration in seconds for this manifest.
                           Overrides HTTP Cache-Control for the purpose
                           of manifest staleness evaluation.
-                          Default: 3600. REQUIRED when trust_class is
-                          "regulated" (see Section 6.10.3).
+                          Default: 3600. MAY be omitted for trust_class
+                          "public", "sandbox", "enterprise". REQUIRED
+                          when trust_class is "regulated"
+                          (see Section 6.10.3).
    signature     object   Manifest integrity signature (see Section 6.7)
    server_card   string   URL of a SEP-2127 compatible Server Card
                           document, providing richer pre-connection
@@ -1361,7 +970,8 @@ Table of Contents
       these paths.
 
    -  This document additionally defines the "mcp" URI scheme and
-      DNS TXT fallback, which are not covered by SEP-1649.
+      DNS TXT discovery (base mode and fast mode), which are not
+      covered by SEP-1649.
 
    -  This document requests formal IANA registration of both the
       URI scheme and the well-known URI suffix, as noted as a future
@@ -1435,9 +1045,11 @@ Table of Contents
 
 7.2.  DNS Hijacking
 
-   DNS TXT records may be spoofed on networks without DNSSEC. Clients
-   SHOULD prefer the well-known URI mechanism over DNS TXT records.
-   Operators SHOULD enable DNSSEC where available.
+   DNS TXT records may be spoofed on networks without DNSSEC.
+   Operators SHOULD enable DNSSEC where available.  When DNS TXT and
+   .well-known endpoints conflict, the .well-known manifest MUST take
+   precedence, as HTTPS provides domain authenticity guarantees that
+   unsigned DNS records do not (see Section 4.3).
 
    DNS-based manifest signatures (Section 6.7) inherit the same
    vulnerability. Operators using the signature mechanism SHOULD
