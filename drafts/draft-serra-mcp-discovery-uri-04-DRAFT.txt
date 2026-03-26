@@ -96,21 +96,39 @@ Table of Contents
        6.6.  Transport Values
        6.7.  Manifest Signature (MAY)
        6.8.  Endpoint Domain Validation
-
-   Clients MUST verify that the host component of the "endpoint" field
-   in the manifest matches or is a subdomain of the host from which the
-   manifest was retrieved. Manifests where the endpoint host does not
-   match the retrieval host MUST be rejected.
-
-   Examples (manifest retrieved from example.com):
-
-      "endpoint": "https://example.com/mcp/"          valid
-      "endpoint": "https://api.example.com/mcp/"      valid
-      "endpoint": "https://other-domain.com/mcp/"     INVALID -- reject
-
-   This rule prevents manifest-based endpoint hijacking, where a
-   compromised or fraudulent manifest redirects an MCP client to an
-   unrelated server.
+       6.9.  Expires Field
+       6.10. Security Capability Negotiation
+           6.10.1. Overview
+           6.10.2. The trust_class Field
+           6.10.3. Mandatory Sub-Fields by trust_class
+           6.10.4. The auth Object
+           6.10.5. The compliance Object
+           6.10.6. The logging Object
+           6.10.7. Default Values and Omitted Fields
+           6.10.8. Implementation Guidance for Non-Technical Operators
+       6.11. Payment Advertisement (MAY)
+       6.12. Primitive Previews (MAY)
+           6.12.1. Tool Preview Object
+           6.12.2. Resource Preview Object
+           6.12.3. Prompt Preview Object
+           6.12.4. Consistency Requirement
+           6.12.5. Relationship to SEP-1649
+       6.13. Minimal Example
+       6.14. Full Example with Primitive Previews
+       6.15. HTTP Response Requirements
+   7.  Security Considerations
+       7.1.  Manifest Spoofing
+       7.2.  DNS Hijacking
+       7.3.  Rate Limiting
+       7.4.  Sensitive Data
+       7.5.  Manifest Integrity via JWK Signature
+   8.  IANA Considerations
+       8.1.  URI Scheme Registration
+       8.2.  Well-Known URI Registration
+   9.  Reference Implementation
+   10. References
+       10.1. Normative References
+       10.2. Informative References
 
 6.9.  Expires Field
 
@@ -839,6 +857,11 @@ Table of Contents
    crawl         boolean  false to opt out of indexing
    expires       string   ISO 8601 timestamp after which the manifest
                           MUST be considered stale and re-fetched
+   cache_ttl     integer  Cache duration in seconds for this manifest.
+                          Overrides HTTP Cache-Control for the purpose
+                          of manifest staleness evaluation.
+                          Default: 3600. REQUIRED when trust_class is
+                          "regulated" (see Section 6.10.3).
    signature     object   Manifest integrity signature (see Section 6.7)
 
 6.5.  Auth Object
